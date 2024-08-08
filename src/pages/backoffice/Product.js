@@ -8,14 +8,40 @@ import axios from "axios";
 function Product () {
     const [product, setProduct] = useState({}); //Create, Update
     const [products, setProducts] = useState([]); //Show all
+    const [img, setImg] = useState({}); //file for upload
 
     useEffect(() => {
         fetchData();
     }, []);
 
+    const handleUpload = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('img', img);
+
+            const res = await axios.post(config.apiPath + '/product/upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': localStorage.getItem('token')
+                }
+            })
+
+            if (res.data.newName !== undefined) {
+                return res.data.newName;
+            }
+        } catch (e) {
+            Swal.fire({
+                title: 'error',
+                text: e.message,
+                icon: 'error'
+            })
+        }
+        return "";
+    }
+
     const handleSave = async () => {
         try {
-            product.img = "";
+            product.img = await handleUpload();
             product.price = parseInt(product.price);
             product.cost = parseInt(product.cost);
 
@@ -70,6 +96,7 @@ function Product () {
             price: '',
             cost: ''
         })
+        setImg({});
     }
 
     const handleRemove = async (item) => {
@@ -105,6 +132,22 @@ function Product () {
         }
     }
 
+    const selectedFile = (inputFile) => {
+        if (inputFile !== undefined) {
+            if (inputFile.length > 0) {
+                setImg(inputFile[0]);
+            }
+        }
+    }
+
+    const showImage = (item) => {
+        if (item.img !== "") {
+            return <img alt='' className="img-fluid" src={config.apiPath + '/uploads/' + item.img} />
+        }
+
+        return <></>;
+    }
+
     return <BackOffice>
         <div className="h4">Product</div>
         <button onClick={clearForm} className="btn btn-primary mr-2" data-toggle='modal' data-target='#modalProduct'>
@@ -127,6 +170,7 @@ function Product () {
             <tbody>
                 {(products.length > 0) ? products.map(item =>
                     <tr key={item.id}>
+                        <td>{showImage(item)}</td>
                         <td>{item.name}</td>
                         <td className="text-right">{item.cost}</td>
                         <td className="text-right">{item.price}</td>
@@ -162,7 +206,7 @@ function Product () {
             </div>
             <div>
                 <div>ภาพสินค้า</div>
-                <input className="form-control" type="file"/>
+                <input className="form-control" type="file" onChange={e => selectedFile(e.target.files)} />
             </div>
             <div className="mt-3">
                 <button className="btn btn-primary" onClick={handleSave}>
